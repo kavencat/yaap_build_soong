@@ -1129,7 +1129,7 @@ func (c *config) EnableCFI() bool {
 }
 
 func (c *config) DisableScudo() bool {
-	return !Bool(c.productVariables.Malloc_use_scudo)
+	return Bool(c.productVariables.Malloc_use_jemalloc)
 }
 
 func (c *config) DisableMimalloc() bool {
