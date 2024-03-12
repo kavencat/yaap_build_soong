@@ -261,6 +261,8 @@ org\.chromium\.arc\..*
 
 # OPLUS adds
 com\.oplus\..*
+net\.oneplus\..*
+oplus\..*
 
 ###################################################
 # IFAA Manager used for Alipay and/or WeChat payment
