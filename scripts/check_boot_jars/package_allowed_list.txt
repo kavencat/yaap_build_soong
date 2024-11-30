@@ -268,6 +268,9 @@ oplus\..*
 # IFAA Manager used for Alipay and/or WeChat payment
 org\.ifaa\.android\.manager.*
 
+# LMOFreeform
+com\.libremobileos\..*
+
 # QC adds
 com.qualcomm.qti
 com.quicinc.tcmiface
