@@ -25,6 +25,8 @@ var androidmk_denylist []string = []string{
 	"dalvik/",
 	"developers/",
 	"development/",
+	"device/common/",
+	"device/google_car/",
 	"device/sample/",
 	"frameworks/",
 	// Do not block other directories in kernel/, see b/319658303.
@@ -33,12 +35,22 @@ var androidmk_denylist []string = []string{
 	"kernel/tests/",
 	"libcore/",
 	"libnativehelper/",
+	"packages/",
 	"pdk/",
 	"sdk/",
 	"test/",
 	"trusty/",
 	// Add back toolchain/ once defensive Android.mk files are removed
 	//"toolchain/",
+	"vendor/google_contexthub/",
+	"vendor/google_data/",
+	"vendor/google_elmyra/",
+	"vendor/google_mhl/",
+	"vendor/google_pdk/",
+	"vendor/google_testing/",
+	"vendor/partner_testing/",
+	"vendor/partner_tools/",
+	"vendor/pdk/",
 }
 
 func blockAndroidMks(ctx Context, androidMks []string) {
