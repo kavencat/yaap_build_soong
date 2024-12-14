@@ -55,8 +55,8 @@ func makeVarsProvider(ctx android.MakeVarsContext) {
 		ctx.Strict("ERROR_PRONE_CHECKS", "${ErrorProneChecks}")
 	}
 
-	ctx.Strict("TARGET_JAVAC", "${JavacCmd}  ${JavacVmFlags} ${CommonJdkFlags}")
-	ctx.Strict("HOST_JAVAC", "${JavacCmd}  ${JavacVmFlags} ${CommonJdkFlags}")
+	ctx.Strict("TARGET_JAVAC", "${JavacCmd} -J-Xmx8158m ${JavacVmFlags} ${CommonJdkFlags}")
+	ctx.Strict("HOST_JAVAC", "${JavacCmd} -J-Xmx8158m ${JavacVmFlags} ${CommonJdkFlags}")
 
 	ctx.Strict("JLINK", "${JlinkCmd}")
 	ctx.Strict("JMOD", "${JmodCmd}")
