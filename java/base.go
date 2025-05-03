@@ -60,6 +60,9 @@ type CommonProperties struct {
 	// This is most useful in the arch/multilib variants to remove non-common files
 	Exclude_srcs []string `android:"path,arch_variant"`
 
+	// list of Kotlin source files that should excluded from the list of common_srcs.
+	Exclude_common_srcs []string `android:"path,arch_variant"`
+
 	// list of directories containing Java resources
 	Java_resource_dirs []string `android:"arch_variant"`
 
@@ -86,6 +89,10 @@ type CommonProperties struct {
 
 	// list of module-specific flags that will be used for kotlinc compiles
 	Kotlincflags []string `android:"arch_variant"`
+
+	// Kotlin language version to target. Currently only 1.9 and 2 are supported.
+	// See kotlinc's `-language-version` flag.
+	Kotlin_lang_version *string
 
 	// list of java libraries that will be in the classpath
 	Libs []string `android:"arch_variant"`
@@ -922,7 +929,7 @@ func (j *Module) deps(ctx android.BottomUpMutatorContext) {
 
 	if j.useCompose(ctx) {
 		ctx.AddVariationDependencies(ctx.Config().BuildOSCommonTarget.Variations(), kotlinPluginTag,
-			"androidx.compose.compiler_compiler-hosted-plugin")
+			"kotlin-compose-compiler-plugin")
 	}
 }
 
@@ -1182,7 +1189,7 @@ func (j *Module) compile(ctx android.ModuleContext, extraSrcJars, extraClasspath
 		flags = protoFlags(ctx, &j.properties, &j.protoProperties, flags)
 	}
 
-	kotlinCommonSrcFiles := android.PathsForModuleSrcExcludes(ctx, j.properties.Common_srcs, nil)
+	kotlinCommonSrcFiles := android.PathsForModuleSrcExcludes(ctx, j.properties.Common_srcs, j.properties.Exclude_common_srcs)
 	if len(kotlinCommonSrcFiles.FilterOutByExt(".kt")) > 0 {
 		ctx.PropertyErrorf("common_srcs", "common_srcs must be .kt files")
 	}
@@ -1319,6 +1326,21 @@ func (j *Module) compile(ctx android.ModuleContext, extraSrcJars, extraClasspath
 		// user defined kotlin flags.
 		kotlincFlags := j.properties.Kotlincflags
 		CheckKotlincFlags(ctx, kotlincFlags)
+
+		// Available kotlin versions can be found at
+		// https://github.com/JetBrains/kotlin/blob/master/compiler/util/src/org/jetbrains/kotlin/config/LanguageVersionSettings.kt#L560
+		// in the `LanguageVersion` class.
+		// For now, avoid targeting language versions directly, as we'd like to kee our source
+		// code version aligned as much as possible. Ideally, after defaulting to "2", we
+		// can remove the "1.9" option entirely, or at least make it emit a warning.
+		kotlin_lang_version := proptools.StringDefault(j.properties.Kotlin_lang_version, "1.9")
+		if kotlin_lang_version == "1.9" {
+			kotlincFlags = append(kotlincFlags, "-language-version 1.9")
+		} else if kotlin_lang_version == "2" {
+			kotlincFlags = append(kotlincFlags, "-Xsuppress-version-warnings", "-Xconsistent-data-class-copy-visibility")
+		} else {
+			ctx.PropertyErrorf("kotlin_lang_version", "Must be one of `1.9` or `2`")
+		}
 
 		// Workaround for KT-46512
 		kotlincFlags = append(kotlincFlags, "-Xsam-conversions=class")
@@ -2041,7 +2063,9 @@ func CheckKotlincFlags(ctx android.ModuleContext, flags []string) {
 		} else if strings.HasPrefix(flag, "-Xintellij-plugin-root") {
 			ctx.PropertyErrorf("kotlincflags",
 				"Bad flag: `%s`, only use internal compiler for consistency.", flag)
-		} else if inList(flag, config.KotlincIllegalFlags) {
+		} else if slices.ContainsFunc(config.KotlincIllegalFlags, func(f string) bool {
+			return strings.HasPrefix(flag, f)
+		}) {
 			ctx.PropertyErrorf("kotlincflags", "Flag `%s` already used by build system", flag)
 		} else if flag == "-include-runtime" {
 			ctx.PropertyErrorf("kotlincflags", "Bad flag: `%s`, do not include runtime.", flag)
@@ -2906,14 +2930,18 @@ func (module *Module) collectJarJarRules(ctx android.ModuleContext) *JarJarProvi
 // Get the jarjar rule text for a given provider for the fully resolved rules. Classes that map
 // to "" won't be in this list because they shouldn't be renamed yet.
 func getJarJarRuleText(provider *JarJarProviderData) string {
-	result := ""
+	result := strings.Builder{}
 	for _, orig := range android.SortedKeys(provider.Rename) {
 		renamed := provider.Rename[orig]
 		if renamed != "" {
-			result += "rule " + orig + " " + renamed + "\n"
+			result.WriteString("rule ")
+			result.WriteString(orig)
+			result.WriteString(" ")
+			result.WriteString(renamed)
+			result.WriteString("\n")
 		}
 	}
-	return result
+	return result.String()
 }
 
 // Repackage the flags if the jarjar rule txt for the flags is generated
